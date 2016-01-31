@@ -1,0 +1,12 @@
+[package]
+name = "multitail"
+version = "0.1.0"
+authors = ["Joel Self <joel@dislocal.com>"]
+
+[dependencies]
+term = "^0.4.2"
+notify = "^2.5.4"
+getopts = "^0.2.14"
+
+[[bin]]
+name = "mtail"
