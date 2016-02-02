@@ -90,8 +90,9 @@ fn start_all_tails(matches: Vec<String>) {
 	BRIGHT_WHITE, BRIGHT_CYAN, BRIGHT_RED];
 	static BG_COLORS: [u16; 3] = [BLACK, BLUE, RED];
 	static FG_COLOR_LEN: usize = 8;
-	static TOTAL_COLORS: usize = 24; // FG_COLORS.len() * BG_COLORS.len(), add more BG colors and attributes
-	let mut color_idx = 0;
+	static BG_COLOR_LEN: usize = 3; // FG_COLORS.len() * BG_COLORS.len(), add more BG colors and attributes
+	let mut fg_color_idx = 0;
+	let mut bg_color_idx = 0;
 	let mut terminal = term::stdout().unwrap();
 	let console = Arc::new(Mutex::new(terminal));
 	let mut handles = vec![];
@@ -100,10 +101,11 @@ fn start_all_tails(matches: Vec<String>) {
 		let console = console.clone();
 		let filepath = filepath.clone();
 		handles.push(thread::spawn(move || {
-			start_tail(filepath, console, FG_COLORS[color_idx % FG_COLOR_LEN].clone(),
-				BG_COLORS[color_idx / FG_COLOR_LEN].clone());
+			start_tail(filepath, console, FG_COLORS[fg_color_idx].clone(),
+				BG_COLORS[bg_color_idx].clone());
 		}));
-		color_idx = (color_idx + 1) % TOTAL_COLORS;
+		fg_color_idx = (fg_color_idx + 1) % FG_COLOR_LEN;
+		bg_color_idx = (bg_color_idx + 1) % BG_COLOR_LEN;
 	}
 
 	while handles.len() > 0 {
