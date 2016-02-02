@@ -7,6 +7,7 @@ authors = ["Joel Self <joel@dislocal.com>"]
 term = "^0.4.2"
 notify = "^2.5.4"
 getopts = "^0.2.14"
+fsevent = "^0.2.12"
 
 [[bin]]
 name = "mtail"
