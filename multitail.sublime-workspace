@@ -1,0 +1,279 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "extern crate getopts;\nextern crate term;extern crate notify;\nuse std::sync::mpsc::channel;\nuse std::sync::{Arc, Mutex};\nuse std::thread;\nuse std::env;\nuse std::fs::File;\nuse std::io::SeekFrom;\nuse std::io::prelude::*;\nuse std::str;\nuse term::color::*;\nuse term::Terminal;\nuse getopts::Options;\nuse notify::{RecommendedWatcher, Error, Watcher};\nuse notify::op;\n\nfn print_usage(program: &str, opts: Options) {\n	let brief = format!(\"Usage: {} FILE [FILE]*\", program);\n	print!(\"{}\", opts.usage(&brief));\n}\n\nfn main() {\n	let args: Vec<String> = env::args().collect();\n	let program = args[0].clone();\n\n	let mut opts = Options::new();\n	opts.optflag(\"h\", \"help\", \"Print this help menu\");\n	let matches = match opts.parse(&args[1..]) {\n		Ok(m)		=> { m },\n		Err(f) 	=> { panic!(f.to_string()) },\n	};\n	if matches.opt_present(\"h\") {\n		print_usage(&program, opts);\n		return;\n	}\n\n	if !matches.free.is_empty() {\n		start_all_tails(matches.free);\n	} else {\n		print_usage(&program, opts);\n		return;\n	};\n}\n\nfn start_all_tails(matches: Vec<String>) {\n	static FG_COLORS: [u16; 8] = [BRIGHT_BLUE, YELLOW, BRIGHT_GREEN, BRIGHT_CYAN, BRIGHT_MAGENTA,\n		BRIGHT_WHITE, BRIGHT_CYAN, BRIGHT_RED];\n	static BG_COLORS: [u16; 3] = [BLACK, BLUE, RED];\n	static FG_COLOR_LEN: usize = 8;\n	static TOTAL_COLORS: usize = 24; // FG_COLORS.len() * BG_COLORS.len(), add more BG colors and attributes\n	let mut color_idx = 0;\n	let mut terminal = term::stdout().unwrap();\n	let console = Arc::new(Mutex::new(terminal));\n	let mut handles = vec![];\n	for filepath in matches.iter() {\n		{\n			let mut console = console.lock().unwrap();\n			writeln!(console, \"Starting tail for file: \\\"{}\\\".\", filepath).unwrap();\n			console.reset().unwrap();\n			// console.unlock() here\n		}\n		let console = console.clone();\n		let filepath = filepath.clone();\n		handles.push(thread::spawn(move || {\n			start_tail(filepath, console, FG_COLORS[color_idx % FG_COLOR_LEN].clone(),\n				BG_COLORS[color_idx / FG_COLOR_LEN].clone());\n			color_idx = (color_idx + 1) % TOTAL_COLORS;\n		}));\n		while handles.len() > 0 {\n			let handle = handles.pop();\n			if let Some(h) = handle {\n				h.join();\n			}\n		}\n	}\n\n	fn start_tail<T: Terminal + ?Sized>(filepath: String, console: Arc<Mutex<Box<T>>>, fg_color: u16,\n		bg_color: u16) {\n		let mut file = open_and_seek(&filepath);\n		let (tx, rx) = channel();\n\n		let watcher: Result<RecommendedWatcher, Error> = Watcher::new(tx);\n		match watcher {\n			Ok(mut watcher) => {\n				watcher.watch(filepath.clone()).unwrap(); // This returns ()\n				{\n					let mut console = console.lock().unwrap();\n					writeln!(console, \"Got watcher for file: \\\"{}\\\"\", filepath).unwrap();\n					console.reset().unwrap();\n					// console.unlock()\n				}\n				loop {\n					match rx.recv() {\n						Ok(event) => {\n							if event.op.unwrap() == op::WRITE {\n								{\n									let mut console = console.lock().unwrap();\n									writeln!(console, \"Got Write Event!\");\n									console.reset().unwrap();\n								}\n								//Read from fileß	\n								let mut buf: Vec<u8> = vec![];\n								let _bytes_read = file.read_to_end(& mut buf).unwrap();\n								let last_nl = find_last_nl(&buf);\n								{\n									// Lock the console, change the color, and write all data\n									let mut console = console.lock().unwrap();\n									console.fg(fg_color).unwrap();\n									console.bg(bg_color).unwrap();\n									// console.attr(attr);\n									write!(console, \"{}\", str::from_utf8(&buf[..last_nl]).unwrap()).unwrap(); // TODO: actually handle the result\n									console.reset().unwrap();\n									// lock goes out of scope and unlocks\n								}\n								// Seek back to just after the last nl\n								file.seek(SeekFrom::Current(last_nl as i64 - buf.len() as i64)).unwrap();\n							}\n						},\n						_ => (),\n					}\n				}\n			},\n			// TODO: Better error message\n			Err(_) => println!(\"Error\"),\n		}\n	}\n\n	fn open_and_seek(filepath: &str) -> File {\n		// TODO: ERROR handling and seek to end\n		// file.seek(SeekFrom::End(0)).unwrap();\n		return File::open(filepath).unwrap();\n	}\n\n	fn find_last_nl(buf: &Vec<u8>) -> usize {\n		// TODO: implement this, search backwards for \\n or \\n\\r, return index that includes the newline\n		return buf.len();\n	}\n}\n",
+			"file": "src/main.rs",
+			"file_size": 4334,
+			"file_write_time": 130988244400000000,
+			"settings":
+			{
+				"buffer_size": 4152,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 87.0,
+		"last_filter": "Package Control: Instal",
+		"selected_items":
+		[
+			[
+				"Package Control: Instal",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: Ins",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: In",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 449.0
+	},
+	"console":
+	{
+		"height": 288.0,
+		"history":
+		[
+			"view.run_command('example')",
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/joel.self/Projects/multitail",
+		"/Users/joel.self/Projects/multitail/src"
+	],
+	"file_history":
+	[
+		"/Users/joel.self/Projects/multitail/src/main.rs",
+		"/Users/joel.self/Projects/Sublime/Default.sublime-package",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/Default/Default (OSX).sublime-keymap",
+		"/Users/joel.self/tmp.rs",
+		"/Users/joel.self/Library/Application Support/Sublime Text 2/Packages/Color Scheme - Default/Monokai.tmTheme",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/BeautifyRust/Default (OSX).sublime-keymap",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/User/BeautifyRust.sublime-settings",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/BeautifyRust/BeautifyRust.sublime-settings",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160115131925.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160111085633.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160111151354.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEComMgr20160111195838.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160113074225.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160111131608.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160114071628.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160114095150.log",
+		"/Users/joel.self/Downloads/logs/logs/LRAIEEngine20160111111240.log",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/LogView/logview.sublime-settings",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/Package Control/Package Control.sublime-settings",
+		"/Users/joel.self/Library/Application Support/Sublime Text 3/Packages/User/Package Control.sublime-settings"
+	],
+	"find":
+	{
+		"height": 23.0
+	},
+	"find_in_files":
+	{
+		"height": 93.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"\\n",
+			"635883596647183496.dat",
+			"635881001956999499.dat",
+			"635881069023125806.dat",
+			"635881215171949188.dat",
+			"635882669467339015.dat",
+			"635881001968650675.dat",
+			"635880999906823556.dat",
+			"635881001956999499.dat",
+			"635883596647183496.dat",
+			" 635883596647183496.dat",
+			"635881001956999499.dat",
+			"635883596647183496.dat",
+			"635857464269278927.dat",
+			"635883743661779848.dat",
+			"635883507911125814.dat",
+			"635881001968870886.dat",
+			"635880979389806802.dat",
+			"635880979379336759.dat",
+			"635880979379296724.dat",
+			"635881156695815779.dat",
+			"***ERROR*** An error occurred restoring state for Block",
+			"***WARNING*** State file ",
+			"AI Engine shutting down NOW",
+			"permission",
+			"13100",
+			"Caught exception",
+			"caught exception",
+			"caught execption"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			""
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "src/main.rs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4152,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3289,
+								3289
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1133.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 23.0
+	},
+	"input":
+	{
+		"height": 31.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "multitail.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 143.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
